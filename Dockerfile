@@ -8,13 +8,10 @@ RUN apk add --no-cache git make
 WORKDIR /app
 
 # 复制依赖定义
-COPY go.mod go.sum ./
+COPY . .
 
 # 下载依赖
 RUN go mod download && go mod verify
-
-# 复制源代码
-COPY . .
 
 # 构建可执行文件
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o mail-service .
