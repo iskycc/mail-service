@@ -11,7 +11,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 
 # 下载依赖
-RUN go mod download
+RUN go mod download && go mod verify
 
 # 复制源代码
 COPY . .
