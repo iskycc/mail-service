@@ -72,17 +72,17 @@ func main() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	// 允许 GET 和 POST
-	if r.Method != http.MethodPost && r.Method != http.MethodGet {
+	// 允许的方法检查
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	ctx := context.Background()
 	var user, subject, body, altbody, tname string
-	// 处理不同请求方法
+	// 参数获取逻辑
 	switch r.Method {
 	case http.MethodGet:
-		// 从查询参数获取
+		// GET 请求：仅从URL获取参数
 		params := r.URL.Query()
 		user = params.Get("user")
 		subject = params.Get("subject")
@@ -90,10 +90,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		altbody = params.Get("altbody")
 		tname = params.Get("tname")
 	case http.MethodPost:
-		// 根据Content-Type自动解析
+		// POST 请求：根据Content-Type处理
 		contentType := r.Header.Get("Content-Type")
-		// 处理JSON格式
-		if strings.Contains(contentType, "application/json") {
+		// 处理JSON请求
+		if strings.HasPrefix(contentType, "application/json") {
 			var data map[string]string
 			if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 				http.Error(w, "Invalid JSON format", http.StatusBadRequest)
@@ -105,16 +105,27 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			altbody = data["altbody"]
 			tname = data["tname"]
 		} else {
-			// 处理表单数据（兼容x-www-form-urlencoded和multipart/form-data）
-			if err := r.ParseForm(); err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
+			// 处理表单数据（兼容所有类型）
+			if strings.HasPrefix(contentType, "multipart/form-data") {
+				// 解析multipart表单（支持文件上传）
+				if err := r.ParseMultipartForm(32 << 20); err != nil { // 32MB内存，其余存临时文件
+					http.Error(w, "Multipart parse error", http.StatusBadRequest)
+					return
+				}
+			} else {
+				// 解析普通表单
+				if err := r.ParseForm(); err != nil {
+					http.Error(w, "Form parse error", http.StatusBadRequest)
+					return
+				}
 			}
-			user = r.PostFormValue("user")
-			subject = r.PostFormValue("subject")
-			body = r.PostFormValue("body")
-			altbody = r.PostFormValue("altbody")
-			tname = r.PostFormValue("tname")
+			// 统一从POST BODY获取参数（不包含URL参数）
+			postForm := r.PostForm
+			user = postForm.Get("user")
+			subject = postForm.Get("subject")
+			body = postForm.Get("body")
+			altbody = postForm.Get("altbody")
+			tname = postForm.Get("tname")
 		}
 	}
 
