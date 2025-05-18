@@ -1,0 +1,28 @@
+services:
+  app:
+    image: "iskycc/mail-service:latest"
+    ports:
+      - "22125:22125"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PWD=send-libv
+      - MYSQL_HOST=
+      - MYSQL_PORT=
+      - MYSQL_USER=
+      - MYSQL_PWD=
+      - MYSQL_DBNAME=
+    depends_on:
+      - redis
+    networks:
+      - send-libv
+
+  redis:
+    image: "redis:latest"
+    command: ["redis-server", "--requirepass", "send-libv"]  # 直接在这里设置密码
+    networks:
+      - send-libv
+
+networks:
+  send-libv:
+    driver: bridge
