@@ -140,7 +140,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// 获取客户端IP
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		ip = r.RemoteAddr
+		ip := getClientIP(r)
 	}
 
 	maxRetries := 3
@@ -274,4 +274,30 @@ func saveRecord(ctx context.Context, ip, user, subject, body, altbody, tname str
 	if err := rdb.Expire(ctx, key, 7*24*time.Hour).Err(); err != nil {
 		log.Printf("Failed to set expiration: %v", err)
 	}
+}
+
+// 新增函数：获取客户端真实IP
+func getClientIP(r *http.Request) string {
+	// 1. 优先从X-Forwarded-For获取（可能有多个IP，取第一个有效IP）
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		ips := strings.Split(xff, ",")
+		for _, ip := range ips {
+			ip = strings.TrimSpace(ip)
+			if parsedIP := net.ParseIP(ip); parsedIP != nil && !parsedIP.IsPrivate() {
+				return ip
+			}
+		}
+	}
+	// 2. 检查X-Real-IP
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		if parsedIP := net.ParseIP(xri); parsedIP != nil && !parsedIP.IsPrivate() {
+			return xri
+		}
+	}
+	// 3. 最后从RemoteAddr获取
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr // 当没有端口时直接返回
+	}
+	return ip
 }
