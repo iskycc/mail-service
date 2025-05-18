@@ -188,7 +188,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		"info":    resultInfo,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(response)
+	err := json.NewEncoder(w).Encode(response)
 	if err != nil {
 		return
 	}
