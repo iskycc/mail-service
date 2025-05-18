@@ -138,10 +138,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 获取客户端IP
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		ip := getClientIP(r)
-	}
+	ip := getClientIP(r)
 
 	maxRetries := 3
 	var success bool
