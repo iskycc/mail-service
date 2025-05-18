@@ -71,25 +71,39 @@ func main() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	// 允许 GET 和 POST
+	if r.Method != http.MethodPost && r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	ctx := context.Background()
 
-	// 解析表单
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
+	// 自动解析表单数据（兼容 JSON、x-www-form-urlencoded、multipart/form-data）
+	var user, subject, body, altbody, tname string
 
-	// 获取参数
-	user := r.PostForm.Get("user")
-	subject := r.PostForm.Get("subject")
-	body := r.PostForm.Get("body")
-	altbody := r.PostForm.Get("altbody")
-	tname := r.PostForm.Get("tname")
+	switch {
+	case r.Method == http.MethodGet:
+		// 从查询参数中获取值
+		user = r.URL.Query().Get("user")
+		subject = r.URL.Query().Get("subject")
+		body = r.URL.Query().Get("body")
+		altbody = r.URL.Query().Get("altbody")
+		tname = r.URL.Query().Get("tname")
+
+	case r.Method == http.MethodPost:
+		// 自动解析各种格式的请求体
+		if err := r.ParseMultipartForm(10 << 20); err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+
+		user = r.FormValue("user")
+		subject = r.FormValue("subject")
+		body = r.FormValue("body")
+		altbody = r.FormValue("altbody")
+		tname = r.FormValue("tname")
+	}
 
 	// 处理默认值
 	if tname == "" {
