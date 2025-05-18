@@ -146,7 +146,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		"info":    resultInfo,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		return
+	}
 }
 
 func updateMailID(ctx context.Context) (int, error) {
@@ -158,7 +161,12 @@ func getMailConfig(mailID int) (string, int, string, string, error) {
 	if err != nil {
 		return "", 0, "", "", fmt.Errorf("MySQL connection failed: %v", err)
 	}
-	defer db.Close()
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+
+		}
+	}(db)
 
 	var host string
 	var port int
