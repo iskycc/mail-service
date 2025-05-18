@@ -76,33 +76,45 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	ctx := context.Background()
-
-	// 自动解析表单数据（兼容 JSON、x-www-form-urlencoded、multipart/form-data）
 	var user, subject, body, altbody, tname string
-
-	switch {
-	case r.Method == http.MethodGet:
-		// 从查询参数中获取值
-		user = r.URL.Query().Get("user")
-		subject = r.URL.Query().Get("subject")
-		body = r.URL.Query().Get("body")
-		altbody = r.URL.Query().Get("altbody")
-		tname = r.URL.Query().Get("tname")
-
-	case r.Method == http.MethodPost:
-		// 自动解析各种格式的请求体
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
+	// 处理不同请求方法
+	switch r.Method {
+	case http.MethodGet:
+		// 从查询参数获取
+		params := r.URL.Query()
+		user = params.Get("user")
+		subject = params.Get("subject")
+		body = params.Get("body")
+		altbody = params.Get("altbody")
+		tname = params.Get("tname")
+	case http.MethodPost:
+		// 根据Content-Type自动解析
+		contentType := r.Header.Get("Content-Type")
+		// 处理JSON格式
+		if strings.Contains(contentType, "application/json") {
+			var data map[string]string
+			if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+				http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+				return
+			}
+			user = data["user"]
+			subject = data["subject"]
+			body = data["body"]
+			altbody = data["altbody"]
+			tname = data["tname"]
+		} else {
+			// 处理表单数据（兼容x-www-form-urlencoded和multipart/form-data）
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			user = r.PostFormValue("user")
+			subject = r.PostFormValue("subject")
+			body = r.PostFormValue("body")
+			altbody = r.PostFormValue("altbody")
+			tname = r.PostFormValue("tname")
 		}
-
-		user = r.FormValue("user")
-		subject = r.FormValue("subject")
-		body = r.FormValue("body")
-		altbody = r.FormValue("altbody")
-		tname = r.FormValue("tname")
 	}
 
 	// 处理默认值
