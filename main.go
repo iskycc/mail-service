@@ -151,28 +151,35 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		mailID, err := updateMailID(ctx)
 		if err != nil {
 			resultInfo = fmt.Sprintf("Redis error: %v", err)
+			// 新增Redis错误日志
+			log.Printf("[发送失败] 来源IP:%s | 错误类型:Redis | 详情:%v", ip, err)
 			continue
 		}
-
 		// 获取邮件配置
 		host, port, sender, password, err := getMailConfig(mailID)
 		if err != nil {
 			resultInfo = fmt.Sprintf("MySQL error: %v", err)
 			saveRecord(ctx, ip, user, subject, body, altbody, tname, mailID, resultInfo)
+			// 新增MySQL错误日志
+			log.Printf("[发送失败] 来源IP:%s | 邮件ID:%d | 错误类型:MySQL | 收件人:%s | 详情:%v",
+				ip, mailID, user, err)
 			continue
 		}
-
 		// 发送邮件
 		sendResult := sendEmail(host, port, sender, password, user, subject, body, altbody, tname)
 		if sendResult == "" {
 			success = true
 			resultInfo = "Message has been sent"
+			// 新增成功日志
+			log.Printf("[发送成功] 时间:%s | 来源IP:%s | 邮件ID:%d | 发件人:%s | 收件人:%s",
+				time.Now().Format(time.RFC3339), ip, mailID, sender, user)
 		} else {
 			resultInfo = sendResult
+			// 新增失败日志
+			log.Printf("[发送失败] 时间:%s | 来源IP:%s | 邮件ID:%d | 发件人:%s | 收件人:%s | 错误:%s",
+				time.Now().Format(time.RFC3339), ip, mailID, sender, user, sendResult)
 		}
-
 		saveRecord(ctx, ip, user, subject, body, altbody, tname, mailID, resultInfo)
-
 		if success {
 			break
 		}
