@@ -131,7 +131,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	// 处理默认值
 	if tname == "" {
-		tname = "Libv 团队"
+		tname = "Libv团队"
 	}
 	if altbody == "" {
 		altbody = body
