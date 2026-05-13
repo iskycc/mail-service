@@ -1,4 +1,4 @@
-# 文件路径: .gitea/workflows/docker.yml
+# 文件路径: .github/workflows/docker.yml
 name: Docker Image CI
 
 on:
@@ -46,15 +46,15 @@ jobs:
           platforms: linux/amd64
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ gitea.sha }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ gitea.ref_name }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
 
       - name: Clean up local images
         run: |
           docker rmi \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ gitea.sha }} \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ gitea.ref_name }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }} \
             || true
 
       - name: Deploy the New Image
