@@ -1,3 +1,4 @@
+# 文件路径: .gitea/workflows/docker.yml
 name: Docker Image CI
 
 on:
@@ -6,8 +7,8 @@ on:
     tags: [ "v*" ]
 
 env:
-  REGISTRY: docker.io
-  IMAGE_NAME: ${{ github.repository }}
+  REGISTRY: ccr.ccs.tencentyun.com
+  IMAGE_NAME: iskycc/mail-service
 
 jobs:
   build-and-push:
@@ -20,21 +21,69 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
+      - name: Save PATH
+        id: save_path
+        run: echo "saved_path=$PATH" >> $GITHUB_OUTPUT
+
+      - name: Login to Registry
         uses: docker/login-action@v3
         with:
+          registry: ${{ env.REGISTRY }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_PULL_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PULL_PASSWORD }}
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
+          platforms: linux/amd64
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ gitea.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ gitea.ref_name }}
+
+      - name: Clean up local images
+        run: |
+          docker rmi \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ gitea.sha }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ gitea.ref_name }} \
+            || true
+
+      - name: Deploy the New Image
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          port: ${{ secrets.REMOTE_PORT || 22 }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            cd ${{ secrets.COMPOSE_DIR }}
+            docker compose down
+            docker compose pull
+            docker compose up -d
+            docker image prune -a -f
+
+      - name: Restore PATH after deploy
+        run: |
+          echo "PATH_BEFORE_RESTORE=$PATH"
+          SAVED_PATH="${{ steps.save_path.outputs.saved_path }}"
+          IFS=':' read -ra ORIG <<< "$SAVED_PATH"
+          for p in "${ORIG[@]}"; do
+            case ":$PATH:" in
+              *:"$p":*) ;;
+              *)
+                echo "$p" >> "$GITHUB_PATH"
+                export PATH="$p:$PATH"
+              ;;
+            esac
+          done
+          echo "PATH_AFTER_RESTORE=$PATH"
+

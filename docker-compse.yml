@@ -1,6 +1,6 @@
 services:
   app:
-    image: "iskycc/mail-service:latest"
+    image: "ccr.ccs.tencentyun.com/iskycc/mail-service:latest"
     ports:
       - "22125:22125"
     environment:
@@ -12,6 +12,9 @@ services:
       - MYSQL_USER=
       - MYSQL_PWD=
       - MYSQL_DBNAME=
+      - ADMIN_USER=admin
+      - ADMIN_PASSWORD=changeme
+      - JWT_SECRET=your-secret-key-here
     depends_on:
       - redis
     networks:
