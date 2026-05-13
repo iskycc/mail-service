@@ -23,7 +23,7 @@ import (
 	"gopkg.in/gomail.v2"
 )
 
-const version = "1.10.12"
+const version = "1.10.13"
 
 var (
 	rdb            *redis.Client
